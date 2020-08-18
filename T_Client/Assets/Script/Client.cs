@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -13,7 +13,7 @@ public class Client : MonoBehaviour
     private const int PORT = 26000;
     private const int WEB_PORT = 26001;
     private const int BYTE_SIZE = 1024;
-    private const string SERVER_IP ="127.0.0.1"; 
+    private const string SERVER_IP ="127.0.0.1"; //"13.68.175.155";//"25.80.198.249"; 
 
 
     private byte reliableChannel;
@@ -21,7 +21,10 @@ public class Client : MonoBehaviour
     private int hostId;
     private byte error;
 
+    public Account self;
+    private string token;
     private bool isStarted;
+    
 
     #region Monobehaviour
     private void Start() 
@@ -125,7 +128,13 @@ public class Client : MonoBehaviour
 
             case NetOP.OnLoginRequest:
                 OnLoginRequest((Net_OnLoginRequest)msg);
-                break;    
+                break;
+            case NetOP.OnAddFollow:
+                OnAddFollow((Net_OnAddFollow)msg);
+                break;
+            case NetOP.OnRequestFollow:
+                OnRequestFollow((Net_OnRequestFollow)msg);
+                break;            
         }
     }
 
@@ -146,8 +155,32 @@ public class Client : MonoBehaviour
         else
         {
             //Successful Login
+            // This is where we are going to save data about ourself
+            Debug.Log(olr.Discriminator);
+            self = new Account();
+            self.ActiveConnection = olr.ConnectionId;
+            self.Username = olr.Username;
+            self.Discriminator = olr.Discriminator;
+
+            token = olr.Token;
+
+            UnityEngine.SceneManagement.SceneManager.LoadScene("LabHubScene");
         }
     }
+
+    
+    private void OnAddFollow(Net_OnAddFollow oaf)
+    {
+        if(oaf.Success == 0)
+            HubSceneHandler.Instance.AddFollowToUi(oaf.Follow);
+    }
+
+    private void OnRequestFollow(Net_OnRequestFollow orf)
+    {
+        foreach(var follow in orf.Follows)
+            HubSceneHandler.Instance.AddFollowToUi(follow);
+    }
+
 #endregion
 
 #region Send
@@ -225,6 +258,35 @@ public class Client : MonoBehaviour
         LobbyScene.Instance.ChangeAuthenticationMessage("Sending Login Request");
 
         SendServer(lr);
+    }
+
+    public void SendAddFollow(string usernameOrEmail)
+    {
+        Net_AddFollow af = new Net_AddFollow();
+
+        af.Token = token;
+        af.UsernameDiscriminatorOrEmail = usernameOrEmail;
+
+        SendServer(af);
+    }
+
+    public void SendRemoveFollow(string usernameOrEmail)
+    {
+        Net_RemoveFollow rf = new Net_RemoveFollow();
+
+        rf.Token = token;
+        rf.UsernameDiscriminator = usernameOrEmail;
+
+        SendServer(rf);
+    }
+
+    public void SendRequestFollow()
+    {
+        Net_RequestFollow rqf = new Net_RequestFollow();
+
+        rqf.Token = token;
+        SendServer(rqf);
+
     }
 #endregion
 }

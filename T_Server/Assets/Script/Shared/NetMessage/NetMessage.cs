@@ -7,6 +7,12 @@
     public const int OnCreateAccount = 3;
     public const int OnLoginRequest = 4;
 
+    public const int AddFollow = 5;
+    public const int RemoveFollow = 6; 
+    public const int RequestFollow = 7;
+    public const int OnAddFollow = 8;
+    public const int OnRequestFollow = 9;
+
 }
 
 [System.Serializable]

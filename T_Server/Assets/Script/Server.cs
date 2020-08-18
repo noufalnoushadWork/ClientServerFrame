@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -118,8 +119,61 @@ public class Server : MonoBehaviour
                 break;
             case NetOP.LoginRequest:
                 LoginRequest(cnnId,channelId,recHostId,(Net_LoginRequest)msg);
-                break;    
+                break;
+            case NetOP.AddFollow:
+                AddFollow(cnnId,channelId,recHostId,(Net_AddFollow)msg);
+                break;
+            case NetOP.RemoveFollow:
+                RemoveFollow(cnnId,channelId,recHostId,(Net_RemoveFollow)msg);
+                break;
+            case NetOP.RequestFollow:
+                RequestFollow(cnnId,channelId,recHostId,(Net_RequestFollow)msg);
+                break;        
         }
+    }
+
+    private void RequestFollow(int cnnId, int channelId, int recHostId, Net_RequestFollow msg)
+    {
+       Net_OnRequestFollow orf = new Net_OnRequestFollow();
+
+       orf.Follows = db.FindAllFollowBy(msg.Token);
+
+       SendClient(recHostId,cnnId,orf); 
+    }
+
+    private void RemoveFollow(int cnnId, int channelId, int recHostId, Net_RemoveFollow msg)
+    {
+        db.RemoveFollow(msg.Token,msg.UsernameDiscriminator);
+    }
+
+    private void AddFollow(int cnnId, int channelId, int recHostId, Net_AddFollow msg)
+    {
+        Net_OnAddFollow oaf = new Net_OnAddFollow();
+
+        if(db.InsertFollow(msg.Token, msg.UsernameDiscriminatorOrEmail))
+        {
+            oaf.Success = 1;
+            if(Utility.IsEmail(msg.UsernameDiscriminatorOrEmail))
+            {
+                // email
+                oaf.Follow = db.FindAccountByEmail(msg.UsernameDiscriminatorOrEmail).GetAccount();
+            }
+            else
+            {
+                string[] data = msg.UsernameDiscriminatorOrEmail.Split('#');
+                if(data[1] == null)
+                {
+                    return;
+                }
+                else
+                {
+                    oaf.Follow = db.FindAccountByUsernameAndDiscriminator(data[0],data[1]).GetAccount();
+                }
+            }
+        }
+
+        SendClient(recHostId,cnnId,oaf);
+
     }
 
     private void CreateAccount(int cnnId,int channelId,int recHostId,Net_CreateAccount ca)
@@ -156,7 +210,7 @@ public class Server : MonoBehaviour
             olr.Information = "You have been logged in as" + account.Username;
 
             olr.Username = account.Username;
-            olr.Discriminator = account.Username;
+            olr.Discriminator = account.Discriminator;
             olr.Token = account.Token;
             olr.ConnectionId = cnnId;
         }

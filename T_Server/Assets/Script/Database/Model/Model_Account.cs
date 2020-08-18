@@ -13,4 +13,9 @@ public class Model_Account
     public byte Status{set;get;}
     public string Token{set;get;}
     public DateTime LastLogin{set;get;}
+
+    public Account GetAccount()
+    {
+        return new Account() {Username = this.Username, ActiveConnection = this.ActiveConnection, Discriminator = this.Discriminator, Status = this.Status};
+    }
 }
