@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,6 +11,8 @@ public class HubSceneHandler : MonoBehaviour
     [SerializeField] private TMP_InputField addFollowInput;
     [SerializeField] private GameObject followPrefab;
     [SerializeField] private Transform followContainer;
+
+    private Dictionary<string ,GameObject> uiFollows = new Dictionary<string, GameObject>();
     void Start()
     {
         Instance = this;
@@ -19,6 +22,7 @@ public class HubSceneHandler : MonoBehaviour
 
     public void AddFollowToUi(Account follow)
     {
+        Debug.Log("Add UI");
         GameObject followItem = Instantiate(followPrefab,followContainer);
 
         followItem.GetComponentInChildren<TextMeshProUGUI>().text = follow.Username+"#"+follow.Discriminator;
@@ -26,6 +30,13 @@ public class HubSceneHandler : MonoBehaviour
         
         followItem.transform.GetChild(2).GetComponent<Button>().onClick.AddListener(delegate { Destroy(followItem);});
         followItem.transform.GetChild(2).GetComponent<Button>().onClick.AddListener(delegate {OnClickRemoveFollow(follow.Username,follow.Discriminator);});  
+
+        uiFollows.Add(follow.Username + "#" + follow.Discriminator, followItem);
+    }
+
+    public void UpdateFollow(Account follow)
+    {
+        uiFollows[follow.Username + "#" + follow.Discriminator].transform.GetChild(1).GetComponent<Image>().color = (follow.Status != 0) ? Color.green : Color.grey;
     }
 
     #region Button
@@ -47,6 +58,7 @@ public class HubSceneHandler : MonoBehaviour
     {
         //Client Instance remove follow
         Client.Instance.SendRemoveFollow(username +"#"+discriminator);
+        uiFollows.Remove(username+"#"+ discriminator);
     }
 
     #endregion

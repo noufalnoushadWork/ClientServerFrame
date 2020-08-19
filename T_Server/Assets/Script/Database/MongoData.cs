@@ -175,7 +175,7 @@ public Model_Account LoginAccount(string usernameOrEmail,string password, int cn
         myAccount.LastLogin = System.DateTime.Now;
         
         var filter = Builders<Model_Account>.Filter.Eq("_id", myAccount._id);
-        var update = Builders<Model_Account>.Update.Set("class_id", 483);
+        // var update = Builders<Model_Account>.Update.Set("class_id", 483);
         accounts.FindOneAndReplace(filter, myAccount);
     }
     else
@@ -214,6 +214,13 @@ public Model_Account FindAccountByToken(string token)
     return modelAccount;
 }
 
+public Model_Account FindAccountByConnectionId(int connectionId)
+{
+    Model_Account modelAccount = accounts.Find(em => em.ActiveConnection.Equals(connectionId)).SingleOrDefault();
+    return modelAccount;
+}
+
+
 public Model_Followers FindFollowersByUsernameAndDiscriminator(string token, string usernameAndDiscriminator)
 {
     string[] data = usernameAndDiscriminator.Split('#');
@@ -229,8 +236,7 @@ public Model_Followers FindFollowersByUsernameAndDiscriminator(string token, str
     }
     return null;
 }
-
-public List<Account> FindAllFollowBy(string token)
+public List<Account> FindAllFollowFrom(string token) //Name changed from FindAllFollowBy
 {
     var self = new MongoDBRef("account",FindAccountByToken(token)._id);
     List<Model_Followers> modelAccountList = follows.Find(em => em.Sender.Equals(self)).ToList();
@@ -243,9 +249,36 @@ public List<Account> FindAllFollowBy(string token)
     
     return followResponse;
 }
+
+public List<Account> FindAllFollowBy(string email)
+{
+    var self = new MongoDBRef("account",FindAccountByEmail(email)._id);
+    List<Model_Followers> modelAccountList = follows.Find(em => em.Receiver.Equals(self)).ToList();
+
+    List<Account> followResponse = new List<Account>();
+    foreach(var f in modelAccountList)
+    {
+        followResponse.Add(FindAccountByObjectId(f.Sender.Id.AsObjectId).GetAccount());
+    }
+    
+    return followResponse;
+}
 #endregion
 
 #region Update
+
+public void UpdateAccountAfterDisconnection(string email)
+{
+    // Model_Account myAccount = new Model_Account();
+    Model_Account myAccount = accounts.Find(em => em.Email.Equals(email)).SingleOrDefault();
+    myAccount.Token = null;
+    myAccount.ActiveConnection = 0;
+    myAccount.Status = 0;
+
+    var filter = Builders<Model_Account>.Filter.Eq("Email", email);
+    accounts.FindOneAndReplace(filter,myAccount);
+    
+}
 #endregion
 
 #region Delete

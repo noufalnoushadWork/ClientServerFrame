@@ -86,7 +86,7 @@ public class Server : MonoBehaviour
                     break;
 
             case NetworkEventType.DisconnectEvent:
-                    Debug.Log(string.Format("User {0} has Disconnected..",connectionId));
+                    DisconnectEvent(recHostId,connectionId);
                     break;
 
             case NetworkEventType.DataEvent:
@@ -132,11 +132,39 @@ public class Server : MonoBehaviour
         }
     }
 
+    private void  DisconnectEvent(int recHostId, int cnnId)
+    {
+         Debug.Log(string.Format("User {0} has Disconnected..",cnnId));
+
+        //  get a reference to the connected account
+        Model_Account account = db.FindAccountByConnectionId(cnnId);
+        if(account == null)
+        {
+            // making sure athenticated
+            return;
+        } 
+        db.UpdateAccountAfterDisconnection(account.Email);
+
+        // Prepare and send update message
+
+        Net_UpdateFollow fu = new Net_UpdateFollow();
+        Model_Account updatedAccount = db.FindAccountByEmail(account.Email);
+        fu.Follow = updatedAccount.GetAccount();
+
+        foreach(var f in db.FindAllFollowBy(account.Email))
+        {
+            if(f.ActiveConnection == 0)
+                continue;
+            
+            SendClient(recHostId,f.ActiveConnection,fu);
+        }
+
+    }
     private void RequestFollow(int cnnId, int channelId, int recHostId, Net_RequestFollow msg)
     {
        Net_OnRequestFollow orf = new Net_OnRequestFollow();
 
-       orf.Follows = db.FindAllFollowBy(msg.Token);
+       orf.Follows = db.FindAllFollowFrom(msg.Token);
 
        SendClient(recHostId,cnnId,orf); 
     }
@@ -152,7 +180,7 @@ public class Server : MonoBehaviour
 
         if(db.InsertFollow(msg.Token, msg.UsernameDiscriminatorOrEmail))
         {
-            oaf.Success = 1;
+            oaf.Success = 0;
             if(Utility.IsEmail(msg.UsernameDiscriminatorOrEmail))
             {
                 // email
@@ -213,6 +241,20 @@ public class Server : MonoBehaviour
             olr.Discriminator = account.Discriminator;
             olr.Token = account.Token;
             olr.ConnectionId = cnnId;
+
+            // Here
+
+            // Prepare and send update message
+            Net_UpdateFollow fu = new Net_UpdateFollow();
+            fu.Follow = account.GetAccount();
+
+            foreach(var f in db.FindAllFollowBy(account.Email))
+            {
+                if(f.ActiveConnection == 0)
+                    continue;
+                
+                SendClient(recHostId,f.ActiveConnection,fu);
+            }
         }
         else
         {

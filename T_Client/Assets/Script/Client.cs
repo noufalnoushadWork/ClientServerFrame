@@ -134,7 +134,10 @@ public class Client : MonoBehaviour
                 break;
             case NetOP.OnRequestFollow:
                 OnRequestFollow((Net_OnRequestFollow)msg);
-                break;            
+                break;
+            case NetOP.UpdateFollow:
+                OnUpdateFollow((Net_UpdateFollow)msg);
+                break;                
         }
     }
 
@@ -143,7 +146,6 @@ public class Client : MonoBehaviour
         LobbyScene.Instance.EnableInputs();
         LobbyScene.Instance.ChangeAuthenticationMessage(oca.Information);
     }
-
     private void OnLoginRequest(Net_OnLoginRequest olr)
     {
         LobbyScene.Instance.ChangeAuthenticationMessage(olr.Information);
@@ -167,20 +169,21 @@ public class Client : MonoBehaviour
             UnityEngine.SceneManagement.SceneManager.LoadScene("LabHubScene");
         }
     }
-
-    
     private void OnAddFollow(Net_OnAddFollow oaf)
     {
-        if(oaf.Success == 0)
+        if(oaf.Success == 1)
             HubSceneHandler.Instance.AddFollowToUi(oaf.Follow);
     }
-
     private void OnRequestFollow(Net_OnRequestFollow orf)
     {
         foreach(var follow in orf.Follows)
             HubSceneHandler.Instance.AddFollowToUi(follow);
     }
 
+    private void OnUpdateFollow(Net_UpdateFollow fu)
+    {
+        HubSceneHandler.Instance.UpdateFollow(fu.Follow);
+    }
 #endregion
 
 #region Send
